@@ -9,5 +9,6 @@
         public decimal Price { get; set; }
         public string FuelType { get; set; } // petrol, diesel, electric
         public int HorsePower { get; set; }
+        public string? ImageUrl { get; set; }
     }
 }
