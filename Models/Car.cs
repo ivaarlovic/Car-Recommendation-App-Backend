@@ -15,5 +15,6 @@
         public string Transmission { get; set; }
         public int Mileage { get; set; }
         public string BodyType { get; set; }
+        public string Engine { get; set; }
     }
 }
