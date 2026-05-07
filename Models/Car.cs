@@ -10,5 +10,10 @@
         public string FuelType { get; set; } // petrol, diesel, electric
         public int HorsePower { get; set; }
         public string? ImageUrl { get; set; }
+        public string Color { get; set; }
+        public string Description { get; set; }
+        public string Transmission { get; set; }
+        public int Mileage { get; set; }
+        public string BodyType { get; set; }
     }
 }
