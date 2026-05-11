@@ -26,6 +26,15 @@ namespace CarRecommendationApp.Controllers
         [HttpPost]
         public IActionResult AddSurveyUsers([FromBody] SurveyUser surveyUser)
         {
+            var existingUser =
+                _context.SurveyUsers
+                .FirstOrDefault(x =>
+                x.Email == surveyUser.Email);
+
+            if (existingUser != null) {
+                return Ok(existingUser);
+            }
+
             _context.SurveyUsers.Add(surveyUser);
             _context.SaveChanges();
 

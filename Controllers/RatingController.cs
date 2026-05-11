@@ -30,7 +30,21 @@ namespace CarRecommendationApp.Controllers
         [HttpPost]
         public IActionResult PostRatings([FromBody] Rating rating)
         {
-            _context.Ratings.Add(rating);
+
+            var existingRating = 
+                _context.Ratings
+                .FirstOrDefault(x => 
+                    x.UserId == rating.UserId &&
+                    x.CarId == rating.CarId);
+
+            if (existingRating != null)
+            {
+                existingRating.Score = rating.Score;
+                _context.SaveChanges();
+                return Ok(existingRating);
+            }
+
+                _context.Ratings.Add(rating);
             _context.SaveChanges();
 
             return Ok(rating);
