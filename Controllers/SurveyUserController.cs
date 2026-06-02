@@ -40,5 +40,17 @@ namespace CarRecommendationApp.Controllers
 
             return Ok(surveyUser);
         }
+
+        [HttpPost("{id}/complete")]
+        public async Task<IActionResult> CompleteSurvey(int id)
+        {
+            var user = await _context.SurveyUsers.FindAsync(id);
+            if (user == null) 
+                return NotFound();
+
+            user.IsCompleted = true;
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
     }
 }
