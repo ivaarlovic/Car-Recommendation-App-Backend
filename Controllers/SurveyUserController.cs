@@ -52,5 +52,18 @@ namespace CarRecommendationApp.Controllers
             await _context.SaveChangesAsync();
             return Ok();
         }
+
+        [HttpPost("accept-gdpr")]
+        public async Task<IActionResult> AcceptGdpr([FromBody] int userId)
+        {
+            var user = await _context.SurveyUsers.FindAsync(userId);
+            if (user == null) return NotFound();
+
+            user.HasConsented = true;
+            user.CreatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Privola uspjesno pohranjena." });
+        }
     }
 }
