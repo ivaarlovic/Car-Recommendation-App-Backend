@@ -19,7 +19,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("https://ivaarlovic.github.io/car-recommendation-frontend")
+            policy.WithOrigins("https://ivaarlovic.github.io")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
