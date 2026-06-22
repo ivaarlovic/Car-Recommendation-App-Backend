@@ -19,9 +19,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("https://ivaarlovic.github.io", "http://localhost:5173")
+            policy.AllowAnyHeader()
                   .AllowAnyHeader()
                   .AllowAnyMethod();
+
         });
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
