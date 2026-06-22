@@ -25,6 +25,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         new MySqlServerVersion(new Version(8, 0, 0))
+        mySqlOptions => mySqlOptions.EnableRetryOnFailure()
     ));
 
 builder.Services.AddControllers();
@@ -34,11 +35,9 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // === Middleware redoslijed JE BITAN ===
-if (app.Environment.IsDevelopment())
-{
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+
 
 app.UseCors("AllowFrontend"); 
 
