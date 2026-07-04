@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: car-recommendation-backend
+    runtime: dotnet
+    buildCommand: dotnet publish -c Release -o out
+    startCommand: dotnet out/CarRecommendationApp.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
