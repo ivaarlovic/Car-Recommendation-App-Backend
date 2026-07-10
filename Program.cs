@@ -13,7 +13,8 @@ builder.Services.AddCors(options =>
             "http://localhost:5174",
             "http://127.0.0.1:5173",
             "http://127.0.0.1:5174",
-            "https://ivaarlovic.github.io"
+            "https://ivaarlovic.github.io",
+            "https://rev-ai-frontend-umber.vercel.app"
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
