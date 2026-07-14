@@ -1,6 +1,8 @@
 ﻿using CarRecommendationApp.Data;
 using Microsoft.AspNetCore.Mvc;
 using CarRecommendationApp.Models;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CarRecommendationApp.Controllers
 {
@@ -32,6 +34,26 @@ namespace CarRecommendationApp.Controllers
             _context.SaveChanges();
 
             return Ok(car);
+        }
+
+        [HttpPost("save-preferences")]
+        public async Task<IActionResult> SavePreferences([FromBody] List<int> selectedCarIds)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if(userId == null) { return Unauthorized(); }
+
+            foreach (var carId in selectedCarIds)
+            {
+                var pref = new UserCarPreferences
+                {
+                    UserId = int.Parse(userId),
+                    CarId = carId,
+                    Score = 10
+                };
+                _context.UserCarPreferences.Add(pref);
+            }
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Odabir uspješno spremljen." });
         }
     }
 }
