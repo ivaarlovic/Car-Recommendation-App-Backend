@@ -4,6 +4,7 @@ using CarRecommendationApp.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 
+
 namespace CarRecommendationApp.Controllers
 {
     [Route("api/[controller]")]
@@ -36,17 +37,21 @@ namespace CarRecommendationApp.Controllers
             return Ok(car);
         }
 
-        [HttpPost("save-preferences")]
-        public async Task<IActionResult> SavePreferences([FromBody] List<int> selectedCarIds)
+        public class PreferencesDto
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if(userId == null) { return Unauthorized(); }
+            public int UserId { get; set; }
+            public List<int> CarIds { get; set; }
+        }
 
-            foreach (var carId in selectedCarIds)
+        [HttpPost("save-preferences")]
+        public async Task<IActionResult> SavePreferences([FromBody] PreferencesDto dto)
+        {
+
+            foreach (var carId in dto.CarIds)
             {
                 var pref = new UserCarPreferences
                 {
-                    UserId = int.Parse(userId),
+                    UserId = dto.UserId,
                     CarId = carId,
                     Score = 10
                 };
