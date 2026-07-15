@@ -46,12 +46,15 @@ namespace CarRecommendationApp.Controllers
             }
 
             var distinctCarIds = dto.CarIds.Distinct().ToList();
+
             if (distinctCarIds.Count != 5)
             {
                 return BadRequest("Potrebno je odabrati točno 5 različitih automobila.");
             }
 
-            var userExists = await _context.Users.AnyAsync(user => user.Id == dto.UserId);
+            var userExists = await _context.Users
+                .AnyAsync(user => user.Id == dto.UserId);
+
             if (!userExists)
             {
                 return NotFound("Korisnik ne postoji.");
@@ -64,7 +67,8 @@ namespace CarRecommendationApp.Controllers
 
             if (existingCarIds.Count != 5)
             {
-                var missing = distinctCarIds.Except(existingCarIds);
+                var missing = distinctCarIds.Except(existingCarIds).ToList();
+
                 return BadRequest(new
                 {
                     message = "Neki odabrani automobili ne postoje.",
@@ -72,25 +76,24 @@ namespace CarRecommendationApp.Controllers
                 });
             }
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
             var oldPreferences = await _context.UserCarPreferences
                 .Where(preference => preference.UserId == dto.UserId)
                 .ToListAsync();
 
             _context.UserCarPreferences.RemoveRange(oldPreferences);
 
-            var newPreferences = distinctCarIds.Select(carId => new UserCarPreferences
-            {
-                UserId = dto.UserId,
-                CarId = carId,
-                Score = 10,
-                CreatedAt = DateTime.Now
-            });
+            var newPreferences = distinctCarIds.Select(carId =>
+                new UserCarPreferences
+                {
+                    UserId = dto.UserId,
+                    CarId = carId,
+                    Score = 10,
+                    CreatedAt = DateTime.UtcNow
+                });
 
             await _context.UserCarPreferences.AddRangeAsync(newPreferences);
+
             await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
 
             return Ok(new
             {
