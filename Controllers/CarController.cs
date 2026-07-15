@@ -1,9 +1,7 @@
 ﻿using CarRecommendationApp.Data;
-using Microsoft.AspNetCore.Mvc;
 using CarRecommendationApp.Models;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
-
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarRecommendationApp.Controllers
 {
@@ -18,47 +16,87 @@ namespace CarRecommendationApp.Controllers
             _context = context;
         }
 
-        //get
         [HttpGet]
-        public IActionResult GetCars()
+        public async Task<IActionResult> GetCars()
         {
-            var cars = _context.Cars.ToList();
+            var cars = await _context.Cars.AsNoTracking().ToListAsync();
             return Ok(cars);
         }
 
-        //post
         [HttpPost]
-
-        public IActionResult AddCar([FromBody] Car car)
+        public async Task<IActionResult> AddCar([FromBody] Car car)
         {
             _context.Cars.Add(car);
-            _context.SaveChanges();
-
+            await _context.SaveChangesAsync();
             return Ok(car);
         }
 
         public class PreferencesDto
         {
             public int UserId { get; set; }
-            public List<int> CarIds { get; set; }
+            public List<int> CarIds { get; set; } = new();
         }
 
         [HttpPost("save-preferences")]
         public async Task<IActionResult> SavePreferences([FromBody] PreferencesDto dto)
         {
-
-            foreach (var carId in dto.CarIds)
+            if (dto.UserId <= 0)
             {
-                var pref = new UserCarPreferences
-                {
-                    UserId = dto.UserId,
-                    CarId = carId,
-                    Score = 10
-                };
-                _context.UserCarPreferences.Add(pref);
+                return BadRequest("Neispravan korisnik.");
             }
+
+            var distinctCarIds = dto.CarIds.Distinct().ToList();
+            if (distinctCarIds.Count != 5)
+            {
+                return BadRequest("Potrebno je odabrati točno 5 različitih automobila.");
+            }
+
+            var userExists = await _context.Users.AnyAsync(user => user.Id == dto.UserId);
+            if (!userExists)
+            {
+                return NotFound("Korisnik ne postoji.");
+            }
+
+            var existingCarIds = await _context.Cars
+                .Where(car => distinctCarIds.Contains(car.Id))
+                .Select(car => car.Id)
+                .ToListAsync();
+
+            if (existingCarIds.Count != 5)
+            {
+                var missing = distinctCarIds.Except(existingCarIds);
+                return BadRequest(new
+                {
+                    message = "Neki odabrani automobili ne postoje.",
+                    missingCarIds = missing
+                });
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            var oldPreferences = await _context.UserCarPreferences
+                .Where(preference => preference.UserId == dto.UserId)
+                .ToListAsync();
+
+            _context.UserCarPreferences.RemoveRange(oldPreferences);
+
+            var newPreferences = distinctCarIds.Select(carId => new UserCarPreferences
+            {
+                UserId = dto.UserId,
+                CarId = carId,
+                Score = 10,
+                CreatedAt = DateTime.Now
+            });
+
+            await _context.UserCarPreferences.AddRangeAsync(newPreferences);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Odabir uspješno spremljen." });
+            await transaction.CommitAsync();
+
+            return Ok(new
+            {
+                message = "Odabir je uspješno spremljen.",
+                carIds = distinctCarIds
+            });
         }
     }
 }
