@@ -18,5 +18,6 @@ namespace CarRecommendationApp.Data
         public DbSet<SurveyRating> SurveyRatings { get; set; }
         public DbSet<CarView> CarViews { get; set; }
         public DbSet<UserCarPreferences> UserCarPreferences { get; set; }
+        public DbSet<SurveyCarAssignment> SurveyCarAssignments { get; set; }
     }
 }
