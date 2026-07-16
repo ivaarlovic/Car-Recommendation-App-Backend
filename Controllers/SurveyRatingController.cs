@@ -44,10 +44,16 @@ namespace CarRecommendationApp.Controllers
         }
 
         // GET: api/SurveyRating/cars/1
-        // Vraća 10 zajedničkih + 20 promjenjivih automobila
+        // Vraća 3 automobila iz postojećeg ocijenjenog skupa
+        // i 27 automobila s najmanje ocjena.
         [HttpGet("cars/{surveyUserId:int}")]
         public async Task<IActionResult> GetSurveyCars(int surveyUserId)
         {
+            const int totalCarsPerUser = 30;
+            const int referenceCarsPerUser = 3;
+            const int dynamicCarsPerUser =
+                totalCarsPerUser - referenceCarsPerUser;
+
             if (surveyUserId <= 0)
             {
                 return BadRequest("Neispravan korisnik ankete.");
@@ -58,8 +64,8 @@ namespace CarRecommendationApp.Controllers
                 .OrderBy(x => x.Id)
                 .ToListAsync();
 
-            // Korisnik već ima dodijeljenih 30 automobila
-            if (existingAssignments.Count == 30)
+            // Nakon osvježavanja korisnik dobiva isti skup od 30 automobila.
+            if (existingAssignments.Count == totalCarsPerUser)
             {
                 var existingIds = existingAssignments
                     .Select(x => x.CarId)
@@ -81,7 +87,7 @@ namespace CarRecommendationApp.Controllers
                 return Ok(orderedCars);
             }
 
-            // Uklanjanje nepotpunog starog odabira
+            // Brišemo nepotpunu staru dodjelu.
             if (existingAssignments.Count > 0)
             {
                 _context.SurveyCarAssignments
@@ -90,26 +96,28 @@ namespace CarRecommendationApp.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            // Ovo su ID-jevi 22 automobila koji već imaju ocjene.
             var referenceCarIds = _configuration
                 .GetSection("SurveySettings:ReferenceCarIds")
                 .Get<List<int>>()?
                 .Distinct()
                 .ToList() ?? new List<int>();
 
-            if (referenceCarIds.Count != 10)
+            if (referenceCarIds.Count < referenceCarsPerUser)
             {
                 return StatusCode(500, new
                 {
-                    message = "U appsettings.json mora biti postavljeno točno 10 referentnih automobila."
+                    message =
+                        "U appsettings.json nema dovoljno referentnih automobila."
                 });
             }
 
             var existingReferenceIds = await _context.Cars
-                .Where(x => referenceCarIds.Contains(x.Id))
-                .Select(x => x.Id)
+                .Where(car => referenceCarIds.Contains(car.Id))
+                .Select(car => car.Id)
                 .ToListAsync();
 
-            if (existingReferenceIds.Count != 10)
+            if (existingReferenceIds.Count != referenceCarIds.Count)
             {
                 var missingIds = referenceCarIds
                     .Except(existingReferenceIds)
@@ -117,14 +125,22 @@ namespace CarRecommendationApp.Controllers
 
                 return StatusCode(500, new
                 {
-                    message = "Neki referentni automobili ne postoje.",
+                    message =
+                        "Neki referentni automobili ne postoje u tablici Cars.",
                     missingCarIds = missingIds
                 });
             }
 
+            // Svakom korisniku biramo samo 3 iz skupa postojećih 22.
+            var selectedReferenceCarIds = existingReferenceIds
+                .OrderBy(_ => Guid.NewGuid())
+                .Take(referenceCarsPerUser)
+                .ToList();
+
             /*
-             * Za svaki automobil računamo koliko već ima ocjena.
-             * Prednost dobivaju automobili s najmanjim brojem ocjena.
+             * Ostalih 27 biramo među automobilima izvan stara 22.
+             * Prednost imaju automobili koji su najmanje dodjeljivani
+             * i koji imaju najmanje ocjena.
              */
             var candidateStats = await _context.Cars
                 .AsNoTracking()
@@ -132,30 +148,33 @@ namespace CarRecommendationApp.Controllers
                 .Select(car => new
                 {
                     CarId = car.Id,
+
+                    AssignmentCount = _context.SurveyCarAssignments
+                        .Count(assignment => assignment.CarId == car.Id),
+
                     RatingCount = _context.SurveyRatings
                         .Count(rating => rating.CarId == car.Id)
                 })
                 .ToListAsync();
 
-            if (candidateStats.Count < 20)
+            if (candidateStats.Count < dynamicCarsPerUser)
             {
                 return BadRequest(
-                    "U bazi nema dovoljno automobila za odabir 20 promjenjivih automobila."
+                    $"U bazi nema dovoljno automobila za odabir " +
+                    $"{dynamicCarsPerUser} promjenjivih automobila."
                 );
             }
 
-            /*
-             * Automobili s manje ocjena dolaze prvi.
-             * Među automobilima s jednakim brojem ocjena izbor je nasumičan.
-             */
             var dynamicCarIds = candidateStats
-                .OrderBy(x => x.RatingCount)
+                .OrderBy(x => x.AssignmentCount)
+                .ThenBy(x => x.RatingCount)
                 .ThenBy(_ => Guid.NewGuid())
-                .Take(20)
+                .Take(dynamicCarsPerUser)
                 .Select(x => x.CarId)
                 .ToList();
 
-            var selectedCarIds = referenceCarIds
+            // Ukupno: 3 + 27 = 30.
+            var selectedCarIds = selectedReferenceCarIds
                 .Concat(dynamicCarIds)
                 .OrderBy(_ => Guid.NewGuid())
                 .ToList();

@@ -19,5 +19,20 @@ namespace CarRecommendationApp.Data
         public DbSet<CarView> CarViews { get; set; }
         public DbSet<UserCarPreferences> UserCarPreferences { get; set; }
         public DbSet<SurveyCarAssignment> SurveyCarAssignments { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<SurveyCarAssignment>()
+                .HasIndex(x => new { x.SurveyUserId, x.CarId })
+                .IsUnique();
+
+            modelBuilder.Entity<SurveyCarAssignment>()
+                .HasOne<Car>()
+                .WithMany()
+                .HasForeignKey(x => x.CarId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
     }
 }
